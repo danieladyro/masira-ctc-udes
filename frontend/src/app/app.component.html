@@ -1,0 +1,1985 @@
+@if (!store.currentUser()) {
+  <!-- ======================================================================= -->
+  <!-- PANTALLA DE LOGIN Y ACTIVACIÓN DE CONTRASEÑA OAUTH / JWT (REQ. 2)       -->
+  <!-- ======================================================================= -->
+  <div class="auth-layout">
+    <section class="auth-institution-panel">
+      <div class="inst-header-row">
+        <svg class="inst-crest" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <rect x="3" y="3" width="42" height="42" rx="6" stroke="#5EEAD4" stroke-width="2" />
+          <path d="M14 32V16L24 24L34 16V32" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="24" cy="14" r="3" fill="#5EEAD4" />
+        </svg>
+        <div>
+          <h1>Universidad de Santander · Instituto MASIRA</h1>
+          <p class="inst-subtitle">Comité Técnico Científico · Sometimiento Inicial CIM-FT-002-BUC (Versión 00)</p>
+        </div>
+      </div>
+
+      <div class="inst-Bitacora-summary">
+        <h2>Bitácora Analítica de Evaluación y Cadena de Custodia Científica</h2>
+        <p>
+          Plataforma en línea para la radicación estructurada de propuestas de investigación de la Facultad de Ciencias Médicas y de la Salud, revisión iterativa de Secretaría Técnica, evaluación colegiada en el pleno del Comité Técnico Científico y firma electrónica mediante tokens criptográficos de una sola utilización.
+        </p>
+
+        <div class="role-matrix-table">
+          <div class="role-matrix-row">
+            <span class="mono-num role-tag">ROL 01 · INVESTIGADOR</span>
+            <span>Diligencia las 6 secciones de la plantilla CIM-FT-002-BUC, adjunta soportes, descarga el PDF compilado, atiende subsanaciones y consulta únicamente sus proyectos postulados.</span>
+          </div>
+          <div class="role-matrix-row">
+            <span class="mono-num role-tag">ROL 02 · SECRETARIO CTC</span>
+            <span>Crea usuarios con envío de enlace por correo, revisa sometimientos, solicita modificaciones o da Visto Bueno al CTC, registra el concepto punto a punto y exporta listados con campos a elección.</span>
+          </div>
+          <div class="role-matrix-row">
+            <span class="mono-num role-tag">ROL 03 · MIEMBRO CTC</span>
+            <span>Consulta todas las propuestas e informes PDF (sin permisos de modificación ni calificación individual) y firma la aprobación del pleno con tokens de una sola utilización.</span>
+          </div>
+          <div class="role-matrix-row">
+            <span class="mono-num role-tag">ROL 04 · ADMINISTRADOR</span>
+            <span>Supervisa cuentas, sesiones del comité, auditoría de tokens de un solo uso y servicios contenedores (Rust API + PostgreSQL + Angular 20).</span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="inst-footer mono-num">
+        <span>VIGILADA MINEDUCACIÓN · SNIES 2832 · BUCARAMANGA, SANTANDER</span>
+        <span>ARQUITECTURA: RUST REST API · POSTGRESQL · ANGULAR 20 · DOCKER</span>
+      </footer>
+    </section>
+
+    <section class="auth-form-panel">
+      <div class="auth-sheet">
+        <div class="auth-mode-tabs">
+          <button
+            type="button"
+            class="mode-tab-btn"
+            [class.active]="authMode() === 'LOGIN'"
+            (click)="authMode.set('LOGIN')"
+          >
+            Ingreso por Rol (JWT OAuth)
+          </button>
+          <button
+            type="button"
+            class="mode-tab-btn"
+            [class.active]="authMode() === 'ACTIVATE_PASSWORD'"
+            (click)="authMode.set('ACTIVATE_PASSWORD')"
+          >
+            Crear Contraseña desde Enlace de Correo
+          </button>
+        </div>
+
+        @if (statusBanner(); as banner) {
+          <div class="alert-banner" [attr.data-type]="banner.type">
+            <span>{{ banner.text }}</span>
+            <button type="button" class="banner-close" (click)="statusBanner.set(null)">Cerrar</button>
+          </div>
+        }
+
+        @if (authMode() === 'LOGIN') {
+          <div class="auth-box-body">
+            <h2>Autenticación Institucional</h2>
+            <p class="auth-lead">
+              Ingrese con su correo electrónico y la contraseña creada para acceder a la pantalla particular de su rol.
+            </p>
+
+            <form (ngSubmit)="handleLogin()" class="stack-form">
+              <div class="field-group">
+                <label for="login-email">Correo electrónico institucional</label>
+                <input
+                  id="login-email"
+                  type="email"
+                  name="loginEmail"
+                  [(ngModel)]="loginEmail"
+                  required
+                />
+              </div>
+
+              <div class="field-group">
+                <label for="login-password">Contraseña</label>
+                <input
+                  id="login-password"
+                  type="password"
+                  name="loginPassword"
+                  [(ngModel)]="loginPassword"
+                  required
+                />
+              </div>
+
+              <button type="submit" class="btn-primary-action full-width">
+                Ingresar a la Plataforma CTC MASIRA
+              </button>
+            </form>
+          </div>
+        } @else {
+          <div class="auth-box-body">
+            <h2>Creación de Contraseña por Enlace de Correo</h2>
+            <p class="auth-lead">
+              Cuando el Secretario del Comité Técnico Científico crea su cuenta en PostgreSQL, usted recibe un correo con un token único para definir su contraseña y activar el acceso.
+            </p>
+
+            <form (ngSubmit)="handleActivatePassword()" class="stack-form">
+              <div class="field-group">
+                <label for="act-token">Token del enlace recibido por correo electrónico</label>
+                <input
+                  id="act-token"
+                  type="text"
+                  name="activationTokenInput"
+                  class="mono-num"
+                  [(ngModel)]="activationTokenInput"
+                  required
+                />
+              </div>
+
+              <div class="field-group">
+                <label for="new-pass">Nueva contraseña personal (mínimo 6 caracteres)</label>
+                <input
+                  id="new-pass"
+                  type="password"
+                  name="newPasswordInput"
+                  [(ngModel)]="newPasswordInput"
+                  required
+                />
+              </div>
+
+              <div class="field-group">
+                <label for="conf-pass">Confirmar contraseña</label>
+                <input
+                  id="conf-pass"
+                  type="password"
+                  name="confirmPasswordInput"
+                  [(ngModel)]="confirmPasswordInput"
+                  required
+                />
+              </div>
+
+              <button type="submit" class="btn-primary-action full-width">
+                Guardar Contraseña en PostgreSQL y Activar Cuenta
+              </button>
+            </form>
+
+            <div class="pending-users-list">
+              <h3>Cuentas en PostgreSQL Pendientes de Crear Contraseña</h3>
+              @for (u of store.pendingUsers(); track u.id) {
+                <div class="pending-user-item">
+                  <div>
+                    <strong>{{ u.fullName }} ({{ u.role }})</strong>
+                    <div class="mono-num">{{ u.email }} · Token: {{ u.passwordSetupToken }}</div>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn-secondary-outline"
+                    (click)="activationTokenInput = u.passwordSetupToken!"
+                  >
+                    Usar Token
+                  </button>
+                </div>
+              } @empty {
+                <p class="small-note">No hay cuentas pendientes de activación en este momento.</p>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+} @else {
+  <!-- ======================================================================= -->
+  <!-- ESTACIÓN DE TRABAJO OPERATIVA POR ROL (BITÁCORA ANALÍTICA MASIRA-UDES)  -->
+  <!-- ======================================================================= -->
+  @if (store.currentUser(); as user) {
+    <div class="app-shell">
+      <!-- RIEL LATERAL INSTITUCIONAL UDES - MASIRA -->
+      <aside class="nav-rail">
+        <div class="rail-top">
+          <div class="rail-brand">
+            <div class="rail-brand-row">
+              <svg class="rail-logo" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                <rect x="2" y="2" width="36" height="36" rx="5" stroke="#5EEAD4" stroke-width="2" />
+                <path d="M11 27V13L20 20L29 13V27" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <div>
+                <h2>MASIRA · UDES</h2>
+                <p class="mono-num rail-code">CIM-FT-002-BUC · V00</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="active-user-box">
+            <div class="user-name">{{ user.fullName }}</div>
+            <div class="mono-num user-role-pill">{{ formatRoleLabel(user.role) }}</div>
+            <div class="user-email mono-num">{{ user.email }}</div>
+          </div>
+
+          <nav class="rail-menu" aria-label="Módulos de la plataforma">
+            <button
+              type="button"
+              class="rail-nav-btn"
+              [class.active]="activeTab() === 'EXPEDIENTES'"
+              (click)="activeTab.set('EXPEDIENTES')"
+            >
+              <span>Expedientes de Investigación</span>
+              <span class="mono-num nav-count">{{ store.visibleProposals().length }}</span>
+            </button>
+
+            @if (user.role === 'INVESTIGADOR' || user.role === 'ADMIN') {
+              <button
+                type="button"
+                class="rail-nav-btn"
+                [class.active]="activeTab() === 'FORMULARIO_CIM'"
+                (click)="startNewProposal()"
+              >
+                <span>Plantilla CIM-FT-002-BUC</span>
+                <span class="mono-num nav-count">6 Secc.</span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="rail-nav-btn"
+                [class.active]="activeTab() === 'FORMULARIO_CIM'"
+                (click)="inspectSelectedProposalForm()"
+              >
+                <span>Inspección Plantilla CIM-002</span>
+                <span class="mono-num nav-count">6 Secc.</span>
+              </button>
+            }
+
+            <button
+              type="button"
+              class="rail-nav-btn"
+              [class.active]="activeTab() === 'SECRETARIA_Y_PLENO'"
+              (click)="activeTab.set('SECRETARIA_Y_PLENO')"
+            >
+              <span>{{ user.role === 'INVESTIGADOR' ? 'Observaciones y Concepto CTC' : 'Comité Técnico y Tokens' }}</span>
+              <span class="mono-num nav-count">CTC</span>
+            </button>
+
+            @if (user.role === 'SECRETARIO_CTC' || user.role === 'MIEMBRO_CTC' || user.role === 'ADMIN') {
+              <button
+                type="button"
+                class="rail-nav-btn"
+                [class.active]="activeTab() === 'REPORTES_CAMPOS'"
+                (click)="activeTab.set('REPORTES_CAMPOS')"
+              >
+                <span>Listado y Reportes a Medida</span>
+                <span class="mono-num nav-count">CSV/PDF</span>
+              </button>
+            }
+
+            @if (user.role === 'SECRETARIO_CTC' || user.role === 'ADMIN') {
+              <button
+                type="button"
+                class="rail-nav-btn"
+                [class.active]="activeTab() === 'USUARIOS_OAUTH'"
+                (click)="activeTab.set('USUARIOS_OAUTH')"
+              >
+                <span>Creación de Usuarios (JWT)</span>
+                <span class="mono-num nav-count">{{ store.users().length }}</span>
+              </button>
+            }
+
+            <button
+              type="button"
+              class="rail-nav-btn"
+              [class.active]="activeTab() === 'CORREOS_SISTEMA'"
+              (click)="activeTab.set('CORREOS_SISTEMA')"
+            >
+              <span>Bandeja de Correos Enviados</span>
+              <span class="mono-num nav-count">{{ store.emails().length }}</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="rail-footer">
+          <button type="button" class="btn-logout" (click)="store.logout()">
+            Cerrar Sesión Segura
+          </button>
+          <div class="mono-num rail-legal">UDES · SNIES 2832 · BUCARAMANGA</div>
+        </div>
+      </aside>
+
+      <!-- ÁREA PRINCIPAL DE TRABAJO -->
+      <main class="workspace-main">
+        <!-- BANDA SUPERIOR DE CADENA DE CUSTODIA Y SIGUIENTE ACCIÓN ÚNICA -->
+        @if (selectedProposal(); as currentProp) {
+          <header class="custody-strip">
+            <div class="custody-title-block">
+              <div class="custody-heading-line">
+                <h1>{{ currentProp.title || 'Nueva Propuesta en Formulación' }}</h1>
+                <span class="mono-num custody-code-badge">{{ currentProp.code }} · V{{ currentProp.revisionCount }}</span>
+                <span class="status-pill" [attr.data-status]="currentProp.status">
+                  {{ formatStatusLabel(currentProp.status) }}
+                </span>
+              </div>
+              <p class="custody-next-action">
+                {{ getNextRequiredActionForRole(currentProp, user) }}
+              </p>
+            </div>
+
+            <div class="custody-actions">
+              @if (user.role === 'INVESTIGADOR' || user.role === 'ADMIN') {
+                <button type="button" class="btn-secondary-outline" (click)="startNewProposal()">
+                  + Nueva Propuesta CIM-FT-002-BUC
+                </button>
+              }
+              <button
+                type="button"
+                class="btn-teal-solid"
+                (click)="pdfService.downloadProposalCimPdf(currentProp)"
+              >
+                Descargar PDF Propuesta (CIM-FT-002-BUC)
+              </button>
+              <button
+                type="button"
+                class="btn-navy-solid"
+                (click)="pdfService.downloadCtcConceptPdf(currentProp)"
+              >
+                Descargar PDF Concepto CTC
+              </button>
+            </div>
+          </header>
+        }
+
+        @if (statusBanner(); as banner) {
+          <div class="alert-banner" [attr.data-type]="banner.type">
+            <span>{{ banner.text }}</span>
+            <button type="button" class="banner-close" (click)="statusBanner.set(null)">Cerrar</button>
+          </div>
+        }
+
+        <!-- ================================================================= -->
+        <!-- VISTA 1: EXPEDIENTES Y TRAZABILIDAD POR ROL                       -->
+        <!-- ================================================================= -->
+        @if (activeTab() === 'EXPEDIENTES') {
+          @if (selectedProposal(); as activeProp) {
+            <div class="split-evaluation-grid">
+              <section class="sheet-panel">
+                <h2>Expediente Activo CIM-FT-002-BUC ({{ activeProp.code }} · V{{ activeProp.revisionCount }})</h2>
+                <p class="panel-subtitle">
+                  Síntesis de las 6 secciones normativas, presupuesto consolidado en vivo y acceso directo a edición y PDF.
+                </p>
+                <div class="form-grid-2" style="margin-top: 12px;">
+                  <div class="attachment-row">
+                    <div>
+                      <strong>1.1 Investigador Principal</strong>
+                      <div class="sub-cell">{{ activeProp.principalInvestigatorName }}</div>
+                    </div>
+                    <span class="mono-num">{{ activeProp.campus }}</span>
+                  </div>
+                  <div class="attachment-row">
+                    <div>
+                      <strong>1.1 Grupo y Línea</strong>
+                      <div class="sub-cell">{{ activeProp.researchLine }}</div>
+                    </div>
+                    <span class="mono-num">{{ activeProp.callType }}</span>
+                  </div>
+                  <div class="attachment-row">
+                    <div>
+                      <strong>5. Presupuesto Total (11 Rubros)</strong>
+                      <div class="sub-cell">Contrapartida UDES + Aliado + Convocatoria</div>
+                    </div>
+                    <span class="mono-num"><strong>$ {{ activeProp.budgetTotal.toLocaleString('es-CO') }}</strong></span>
+                  </div>
+                  <div class="attachment-row">
+                    <div>
+                      <strong>6. Cronograma (12T) y Soportes</strong>
+                      <div class="sub-cell">{{ activeProp.attachments.length }} anexo(s) cargados</div>
+                    </div>
+                    <button type="button" class="btn-table-action teal" (click)="selectProposal(activeProp); activeTab.set('FORMULARIO_CIM')">
+                      Abrir Plantilla CIM-002
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              @if (user.role !== 'INVESTIGADOR') {
+                <section class="sheet-panel">
+                  <h2>Observaciones Punto a Punto y Sellos de Token Único CTC</h2>
+                  <p class="panel-subtitle">
+                    Verificación de firmas mediante tokens criptográficos de una sola utilización de los miembros del Comité Técnico Científico.
+                  </p>
+                  <div class="token-ledger-list" style="margin-top: 12px;">
+                    @for (tok of activeProp.signatureTokens.slice(0, 3); track tok.id) {
+                      <div class="token-ledger-item" [class.used]="tok.isUsed">
+                        <div>
+                          <strong>{{ tok.memberName }}</strong>
+                          <div class="mono-num sub-cell">
+                            @if (isCurrentUsersToken(tok)) {
+                              {{ tok.singleUseToken }}
+                            } @else {
+                              Token personal enviado a {{ tok.memberEmail }}
+                            }
+                          </div>
+                        </div>
+                        @if (tok.isUsed) {
+                          <span class="token-badge signed mono-num">FIRMADO · 1 USO</span>
+                        } @else if (isCurrentUsersToken(tok)) {
+                          <button
+                            type="button"
+                            class="btn-secondary-outline mono-num"
+                            (click)="memberSingleUseTokenInput = tok.singleUseToken; activeTab.set('SECRETARIA_Y_PLENO')"
+                          >
+                            Firmar con mi Token
+                          </button>
+                        } @else {
+                          <span class="sub-cell mono-num">Pendiente firma del miembro</span>
+                        }
+                      </div>
+                    } @empty {
+                      <div class="attachment-row">
+                        <span>Pendiente de emisión de tokens en sesión plenaria del CTC.</span>
+                        <button type="button" class="btn-secondary-outline" (click)="activeTab.set('SECRETARIA_Y_PLENO')">
+                          Ir a Revisión / Pleno
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </section>
+              } @else {
+                <section class="sheet-panel">
+                  <h2>Seguimiento de Revisión y Observaciones del Comité</h2>
+                  <p class="panel-subtitle">
+                    Consulte las observaciones registradas por Secretaría Técnica o el concepto del Comité Técnico Científico sobre su proyecto.
+                  </p>
+                  <div class="token-ledger-list" style="margin-top: 12px;">
+                    @for (rev of activeProp.reviews; track rev.id) {
+                      <div class="attachment-row">
+                        <div>
+                          <strong>{{ rev.stage }} · {{ rev.decision }} (V{{ rev.revisionNumber }})</strong>
+                          <div class="sub-cell">{{ rev.generalSummary }}</div>
+                        </div>
+                        <button type="button" class="btn-secondary-outline" (click)="activeTab.set('SECRETARIA_Y_PLENO')">
+                          Ver Detalle
+                        </button>
+                      </div>
+                    } @empty {
+                      <div class="attachment-row">
+                        <span>Aún no se han registrado observaciones de revisión sobre este proyecto.</span>
+                        <button type="button" class="btn-secondary-outline" (click)="activeTab.set('SECRETARIA_Y_PLENO')">
+                          Ver Estado
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+            </div>
+          }
+
+          <section class="sheet-panel">
+            <div class="panel-header-bar">
+              <div>
+                <h2>
+                  @if (user.role === 'INVESTIGADOR') {
+                    Mis Propuestas de Investigación Postuladas ({{ user.fullName }})
+                  } @else {
+                    Registro General de Propuestas Sometidas al Comité Técnico Científico
+                  }
+                </h2>
+                <p class="panel-subtitle">
+                  @if (user.role === 'INVESTIGADOR') {
+                    Como Investigador Principal, usted visualiza exclusivamente los proyectos postulados a su nombre, el estado de revisión y los enlaces de descarga PDF.
+                  } @else if (user.role === 'MIEMBRO_CTC') {
+                    Como Miembro del Comité Técnico Científico, puede inspeccionar todos los proyectos, generar informes y firmar en pleno con su token único (la calificación y registro de observaciones es exclusiva del Secretario del CTC).
+                  } @else {
+                    Vista integral de todos los proyectos revisados o en revisión con acceso a observaciones punto a punto, tokens de firma y reportes.
+                  }
+                </p>
+              </div>
+
+              <div class="filter-controls">
+                <input
+                  type="text"
+                  [(ngModel)]="searchQuery"
+                  class="filter-input"
+                  placeholder="Buscar por código, título o investigador..."
+                  aria-label="Filtrar propuestas"
+                />
+                <select [(ngModel)]="statusFilter" class="filter-select" aria-label="Filtrar por estado">
+                  <option value="TODOS">Todos los estados</option>
+                  <option value="BORRADOR">Borrador en edición</option>
+                  <option value="SOMETIDO">Sometido a Secretaría</option>
+                  <option value="EN_REVISION_SECRETARIA">En Revisión Secretaría</option>
+                  <option value="SUBSANACION_SOLICITADA">Modificaciones Solicitadas</option>
+                  <option value="REENVIADO">Reenviado por Investigador</option>
+                  <option value="VISTO_BUENO_CTC">Visto Bueno · Próximo CTC</option>
+                  <option value="EN_PLENO_CTC">En Pleno CTC · Tokens</option>
+                  <option value="FAVORABLE">Concepto Favorable</option>
+                  <option value="FAVORABLE_CON_OBSERVACIONES">Favorable con Observaciones</option>
+                  <option value="RECHAZADO">Rechazado</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="proposal-dropdown-bar">
+              <label for="proposal-dropdown-select" class="proposal-dropdown-label">
+                Seleccionar propuesta de investigación ({{ filteredProposals().length }} disponible{{ filteredProposals().length === 1 ? '' : 's' }}):
+              </label>
+              <select
+                id="proposal-dropdown-select"
+                class="proposal-dropdown-select"
+                [ngModel]="activeFilteredProposal()?.id || ''"
+                (ngModelChange)="onProposalDropdownChange($event)"
+                aria-label="Seleccionar propuesta de investigación de la lista desplegable"
+              >
+                @for (prop of filteredProposals(); track prop.id) {
+                  <option [value]="prop.id">
+                    {{ prop.code }} (V{{ prop.revisionCount }}) — {{ prop.title }} · [{{ formatStatusLabel(prop.status) }}] — {{ prop.principalInvestigatorName }}
+                  </option>
+                } @empty {
+                  <option value="" disabled>No hay propuestas que coincidan con el filtro aplicado</option>
+                }
+              </select>
+            </div>
+
+            <div class="table-scroll">
+              @if (activeFilteredProposal(); as prop) {
+                <table class="ledger-table">
+                  <thead>
+                    <tr>
+                      <th>Radicado / Versión</th>
+                      <th>Título del Proyecto e Investigador Principal</th>
+                      <th>Convocatoria y Línea</th>
+                      <th>Presupuesto Total</th>
+                      <th>Estado y Concepto CTC</th>
+                      <th>Firmas Token Único</th>
+                      <th>Acciones por Rol</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="selected-row">
+                      <td class="mono-num">
+                        <strong>{{ prop.code }}</strong>
+                        <div class="sub-cell">Versión V{{ prop.revisionCount }}</div>
+                      </td>
+                      <td>
+                        <div class="prop-title-cell">{{ prop.title }}</div>
+                        <div class="sub-cell">
+                          {{ prop.principalInvestigatorName }} · <span class="mono-num">{{ prop.principalInvestigatorEmail }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div>{{ prop.callName }}</div>
+                        <div class="sub-cell">{{ prop.researchLine }}</div>
+                      </td>
+                      <td class="mono-num">
+                        $ {{ prop.budgetTotal.toLocaleString('es-CO') }}
+                      </td>
+                      <td>
+                        <span class="status-pill" [attr.data-status]="prop.status">
+                          {{ formatStatusLabel(prop.status) }}
+                        </span>
+                        @if (prop.ctcConcept === 'FAVORABLE_CON_OBSERVACIONES' && !prop.ctcModificationsCleared) {
+                          <div class="sub-cell amber-note">
+                            Reporte sin firmas hasta subsanar ajustes
+                          </div>
+                        }
+                      </td>
+                      <td class="mono-num">
+                        @if (prop.signatureTokens.length > 0) {
+                          <span>{{ getUsedSignaturesCount(prop) }} / {{ prop.signatureTokens.length }} firmados</span>
+                        } @else {
+                          <span class="sub-cell">No emitidos aún</span>
+                        }
+                      </td>
+                      <td>
+                        <div class="row-actions">
+                          <button
+                            type="button"
+                            class="btn-table-action"
+                            (click)="selectProposal(prop); activeTab.set('FORMULARIO_CIM'); $event.stopPropagation()"
+                          >
+                            @if (user.role === 'INVESTIGADOR' || user.role === 'ADMIN') {
+                              Editar / Ver CIM-002
+                            } @else {
+                              Inspeccionar CIM-002
+                            }
+                          </button>
+                          <button
+                            type="button"
+                            class="btn-table-action"
+                            (click)="selectProposal(prop); activeTab.set('SECRETARIA_Y_PLENO'); $event.stopPropagation()"
+                          >
+                            @if (user.role === 'SECRETARIO_CTC') {
+                              Calificar / Concepto
+                            } @else if (user.role === 'MIEMBRO_CTC') {
+                              Firmar Token / Ver
+                            } @else {
+                              Ver Observaciones
+                            }
+                          </button>
+                          <button
+                            type="button"
+                            class="btn-table-action teal"
+                            (click)="pdfService.downloadProposalCimPdf(prop); $event.stopPropagation()"
+                          >
+                            PDF Proyecto
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              } @else {
+                <p class="small-note">No se encontraron propuestas para los criterios de búsqueda seleccionados.</p>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- ================================================================= -->
+        <!-- VISTA 2: PLANTILLA OFICIAL CIM-FT-002-BUC (SECCIONES 1 A 6 + PDF) -->
+        <!-- ================================================================= -->
+        @if (activeTab() === 'FORMULARIO_CIM') {
+          <section class="sheet-panel">
+            <!-- ENCABEZADO DOCUMENTAL CONTROLADO CIM-FT-002-BUC -->
+            <div class="cim-official-header">
+              <div class="cim-box-brand">
+                <h3>Universidad de Santander · Instituto MASIRA</h3>
+                <p class="mono-num">VIGILADA MINEDUCACIÓN · SNIES 2832 · BUCARAMANGA</p>
+              </div>
+              <div class="cim-box-center">
+                <h2>SOMETIMIENTO INICIAL · CIM-FT-002-BUC</h2>
+                <p>Comité Técnico Científico · Facultad de Ciencias Médicas y de la Salud</p>
+              </div>
+              <div class="cim-box-meta mono-num">
+                <div>Versión Formato: 00</div>
+                <div>Radicado: {{ draftProposal.code }} (Versión {{ draftProposal.revisionCount }})</div>
+                <div>Vigencia: 19/05/2026</div>
+              </div>
+            </div>
+
+            @if (!canEditCurrentProposal()) {
+              <div class="readonly-role-banner">
+                <strong>Modo de Lectura y Verificación Documental ({{ formatRoleLabel(user.role) }} · Versión {{ draftProposal.revisionCount }}):</strong>
+                @if (user.role === 'INVESTIGADOR') {
+                  Su propuesta ya fue enviada (Versión {{ draftProposal.revisionCount }}) y el formulario se encuentra bloqueado para modificaciones. Solo se habilitará nuevamente con sus datos prediligenciados para un "Nuevo Envío" si el Secretario del Comité Técnico Científico solicita ajustes o subsanaciones.
+                } @else if (user.role === 'MIEMBRO_CTC') {
+                  De acuerdo con el Requerimiento 6, los miembros del Comité Técnico Científico pueden inspeccionar todos los proyectos y generar informes PDF, pero no pueden modificar ni hacer observaciones directas sobre el formulario.
+                } @else {
+                  Usted está consultando el expediente radicado por {{ draftProposal.principalInvestigatorName }}. Para emitir observaciones o concepto, abra la pestaña Comité Técnico y Tokens.
+                }
+              </div>
+            } @else if (draftProposal.status === 'SUBSANACION_SOLICITADA' || (draftProposal.status === 'FAVORABLE_CON_OBSERVACIONES' && !draftProposal.ctcModificationsCleared)) {
+              <div class="readonly-role-banner">
+                <strong>Formulario Habilitado con Información Prediligenciada para Subsanación (Próxima: Versión {{ draftProposal.revisionCount + 1 }}):</strong>
+                Realice las modificaciones solicitadas por el Comité Técnico Científico sobre los campos prediligenciados y haga clic en el botón <strong>"Nuevo Envío"</strong> al final del formulario. Una vez enviado, el formulario volverá a bloquearse y el texto completo se anexará como apéndice (Versión {{ draftProposal.revisionCount + 1 }}).
+              </div>
+            }
+
+            <!-- NAVEGADOR DE LAS 6 SECCIONES DE LA PLANTILLA -->
+            <div class="section-stepper" role="tablist">
+              <button
+                type="button"
+                class="step-tab"
+                [class.active]="activeFormSection() === 1"
+                (click)="activeFormSection.set(1)"
+              >
+                1. Identificación y Equipo (1.1 - 1.2)
+              </button>
+              <button
+                type="button"
+                class="step-tab"
+                [class.active]="activeFormSection() === 2"
+                (click)="activeFormSection.set(2)"
+              >
+                2. Resumen y Metodología (2.1 - 2.4)
+              </button>
+              <button
+                type="button"
+                class="step-tab"
+                [class.active]="activeFormSection() === 3"
+                (click)="activeFormSection.set(3)"
+              >
+                3. Alianzas y 4. Matriz de Riesgos
+              </button>
+              <button
+                type="button"
+                class="step-tab"
+                [class.active]="activeFormSection() === 4"
+                (click)="activeFormSection.set(4)"
+              >
+                5. Presupuesto (11 Rubros)
+              </button>
+              <button
+                type="button"
+                class="step-tab"
+                [class.active]="activeFormSection() === 5"
+                (click)="activeFormSection.set(5)"
+              >
+                6. Cronograma (12 Trimestres) y Anexos
+              </button>
+            </div>
+
+            <!-- SECCIÓN 1: 1.1 INFORMACIÓN GENERAL Y 1.2 EQUIPO DE TRABAJO -->
+            @if (activeFormSection() === 1) {
+              <div class="cim-section-body">
+                <h3>1.1. Información General del Proyecto (13 Ítems Reglamentarios)</h3>
+                <div class="form-grid-2">
+                  <div class="field-group span-2">
+                    <label>Título del Proyecto:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.title"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Programa o Unidad Académica:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.academicProgram"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Campus:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.campus"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Grupo de respaldo:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.backingGroup"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Líder del grupo:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.groupLeader"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Línea de investigación:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.researchLine"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Investigador principal:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.principalInvestigatorName"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Correo electrónico investigador principal:</label>
+                    <input
+                      type="email"
+                      [(ngModel)]="draftProposal.principalInvestigatorEmail"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Nombre Entidad Aliada:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.alliedEntityName"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Lugar de Desarrollo:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.developmentLocation"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Nombre de la convocatoria:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.callName"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Tipo de convocatoria:</label>
+                    <input
+                      type="text"
+                      [(ngModel)]="draftProposal.callType"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label>Fecha límite de la convocatoria:</label>
+                    <input
+                      type="date"
+                      [(ngModel)]="draftProposal.callDeadline"
+                      [disabled]="!canEditCurrentProposal()"
+                    />
+                  </div>
+                </div>
+
+                <div class="subsection-header-row">
+                  <h3>1.2. Equipo de Trabajo</h3>
+                  @if (canEditCurrentProposal()) {
+                    <button type="button" class="btn-secondary-outline" (click)="addWorkTeamRow()">
+                      + Agregar Integrante al Equipo
+                    </button>
+                  }
+                </div>
+
+                <div class="table-scroll">
+                  <table class="ledger-table">
+                    <thead>
+                      <tr>
+                        <th>Nombre</th>
+                        <th>Rol</th>
+                        <th>Entidad</th>
+                        <th>Responsabilidades</th>
+                        @if (canEditCurrentProposal()) {
+                          <th>Acción</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (member of draftProposal.workTeam; track $index) {
+                        <tr>
+                          <td>
+                            <input
+                              type="text"
+                              [(ngModel)]="member.nombre"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              [(ngModel)]="member.rol"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              [(ngModel)]="member.entidad"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              [(ngModel)]="member.responsabilidades"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          @if (canEditCurrentProposal()) {
+                            <td>
+                              <button
+                                type="button"
+                                class="btn-table-action"
+                                (click)="removeWorkTeamRow($index)"
+                              >
+                                Quitar
+                              </button>
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+
+            <!-- SECCIÓN 2: RESUMEN EJECUTIVO Y METODOLOGÍA (2.1 A 2.4) -->
+            @if (activeFormSection() === 2) {
+              <div class="cim-section-body">
+                <h3>2. Resumen Ejecutivo y Desglose Metodológico (Numerales 2.1 a 2.4)</h3>
+                <div class="form-grid-2">
+                  <div class="field-group span-2">
+                    <label>2.1. Planteamiento del problema y justificación:</label>
+                    <textarea
+                      rows="4"
+                      [(ngModel)]="draftProposal.problemAndJustification"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.1. Objetivo General:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.generalObjective"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.2. Objetivos Específicos:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.specificObjectives"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.1. Diseño metodológico:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.methodologyDesign"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.2. Ámbito del estudio:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.studySetting"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.3. Participantes y muestreo:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.participantsAndSampling"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.4. Criterios de elegibilidad:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.eligibilityCriteria"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.5. Reclutamiento:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.recruitmentPlan"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.6. Técnicas de recolección de información:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.dataCollectionTechniques"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.7. Procedimientos:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.proceduresDescription"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.8. Análisis de Datos:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.dataAnalysisPlan"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.3.9. Consideraciones éticas:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.ethicalConsiderations"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                  <div class="field-group">
+                    <label>2.4. Resultados y Productos Esperados:</label>
+                    <textarea
+                      rows="3"
+                      [(ngModel)]="draftProposal.expectedResults"
+                      [disabled]="!canEditCurrentProposal()"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- SECCIÓN 3 Y 4: POSIBLES ALIANZAS Y ANÁLISIS DE RIESGOS DE EJECUCIÓN -->
+            @if (activeFormSection() === 3) {
+              <div class="cim-section-body">
+                <h3>3. Posibles Alianzas y Trabajos en Red</h3>
+                <div class="field-group">
+                  <label>Descripción de alianzas científicas, redes nacionales/internacionales y convenios:</label>
+                  <textarea
+                    rows="3"
+                    [(ngModel)]="draftProposal.possibleAlliances"
+                    [disabled]="!canEditCurrentProposal()"
+                  ></textarea>
+                </div>
+
+                <h3 style="margin-top: 24px;">4. Análisis de Riesgos de Ejecución</h3>
+                <p class="small-note">
+                  a) Probabilidad: No probable, Poco probable, Probable, Muy probable · b) Impacto: Nulo, Leve, Moderado, Severo
+                </p>
+
+                <div class="table-scroll">
+                  <table class="ledger-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 150px;">Tipo de riesgo</th>
+                        <th>Descripción del riesgo</th>
+                        <th style="width: 170px;">Probabilidad (a)</th>
+                        <th style="width: 150px;">Impacto (b)</th>
+                        <th>Medidas de mitigación</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (risk of draftProposal.riskMatrix; track risk.tipoRiesgo) {
+                        <tr>
+                          <td><strong>{{ risk.tipoRiesgo }}</strong></td>
+                          <td>
+                            <input
+                              type="text"
+                              [(ngModel)]="risk.descripcion"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <select [(ngModel)]="risk.probabilidad" [disabled]="!canEditCurrentProposal()">
+                              <option value="No probable">No probable</option>
+                              <option value="Poco probable">Poco probable</option>
+                              <option value="Probable">Probable</option>
+                              <option value="Muy probable">Muy probable</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select [(ngModel)]="risk.impacto" [disabled]="!canEditCurrentProposal()">
+                              <option value="Nulo">Nulo</option>
+                              <option value="Leve">Leve</option>
+                              <option value="Moderado">Moderado</option>
+                              <option value="Severo">Severo</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              [(ngModel)]="risk.medidasMitigacion"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+
+            <!-- SECCIÓN 5: PRESUPUESTO (RESUMEN DE 11 RUBROS) -->
+            @if (activeFormSection() === 4) {
+              <div class="cim-section-body">
+                <h3>5. Presupuesto — Resumen por Rubros y Fuentes de Financiación (Valores en COP)</h3>
+                <div class="table-scroll">
+                  <table class="ledger-table budget-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 55px;">Ítem</th>
+                        <th style="min-width: 210px;">Rubro</th>
+                        <th>Contrapartida UDES Especie ($)</th>
+                        <th>Contrapartida UDES Efectivo ($)</th>
+                        <th>Aliado Especie ($)</th>
+                        <th>Aliado Efectivo ($)</th>
+                        <th>Entidad Convocatoria Efectivo ($)</th>
+                        <th>TOTAL RUBRO ($)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (rubro of draftProposal.budgetItems; track rubro.item) {
+                        <tr>
+                          <td class="mono-num"><strong>{{ rubro.item }}</strong></td>
+                          <td><strong>{{ rubro.rubro }}</strong></td>
+                          <td>
+                            <input
+                              type="number"
+                              class="mono-num"
+                              [(ngModel)]="rubro.contrapartidaUdesEspecie"
+                              (ngModelChange)="recalculateDraftBudget()"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              class="mono-num"
+                              [(ngModel)]="rubro.contrapartidaUdesEfectivo"
+                              (ngModelChange)="recalculateDraftBudget()"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              class="mono-num"
+                              [(ngModel)]="rubro.aliadoEspecie"
+                              (ngModelChange)="recalculateDraftBudget()"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              class="mono-num"
+                              [(ngModel)]="rubro.aliadoEfectivo"
+                              (ngModelChange)="recalculateDraftBudget()"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              class="mono-num"
+                              [(ngModel)]="rubro.entidadConvocatoriaEfectivo"
+                              (ngModelChange)="recalculateDraftBudget()"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td class="mono-num total-cell">
+                            $ {{ rubro.total.toLocaleString('es-CO') }}
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                    <tfoot>
+                      <tr class="budget-footer-row mono-num">
+                        <td colspan="2"><strong>TOTAL PRESUPUESTO</strong></td>
+                        <td>$ {{ getColumnTotal('contrapartidaUdesEspecie').toLocaleString('es-CO') }}</td>
+                        <td>$ {{ getColumnTotal('contrapartidaUdesEfectivo').toLocaleString('es-CO') }}</td>
+                        <td>$ {{ getColumnTotal('aliadoEspecie').toLocaleString('es-CO') }}</td>
+                        <td>$ {{ getColumnTotal('aliadoEfectivo').toLocaleString('es-CO') }}</td>
+                        <td>$ {{ getColumnTotal('entidadConvocatoriaEfectivo').toLocaleString('es-CO') }}</td>
+                        <td class="grand-total-cell">$ {{ draftProposal.budgetTotal.toLocaleString('es-CO') }}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            }
+
+            <!-- SECCIÓN 6: CRONOGRAMA DE ACTIVIDADES (12 TRIMESTRES) Y DOCUMENTACIÓN ADICIONAL -->
+            @if (activeFormSection() === 5) {
+              <div class="cim-section-body">
+                <div class="subsection-header-row">
+                  <h3>6. Cronograma de Actividades (12 Trimestres · 1 Año / 2 Año / 3 Año)</h3>
+                  @if (canEditCurrentProposal()) {
+                    <button type="button" class="btn-secondary-outline" (click)="addScheduleRow()">
+                      + Agregar Objetivo / Actividad
+                    </button>
+                  }
+                </div>
+
+                <div class="table-scroll">
+                  <table class="ledger-table">
+                    <thead>
+                      <tr>
+                        <th style="min-width: 220px;">OBJETIVO</th>
+                        <th style="min-width: 240px;">Actividades</th>
+                        @for (q of [1,2,3,4,5,6,7,8,9,10,11,12]; track q) {
+                          <th class="mono-num q-col">T{{ q }}</th>
+                        }
+                        @if (canEditCurrentProposal()) {
+                          <th>Acción</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (sched of draftProposal.scheduleItems; track $index) {
+                        <tr>
+                          <td>
+                            <input
+                              type="text"
+                              [(ngModel)]="sched.objetivo"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              [(ngModel)]="sched.actividades"
+                              [disabled]="!canEditCurrentProposal()"
+                            />
+                          </td>
+                          @for (qIdx of [0,1,2,3,4,5,6,7,8,9,10,11]; track qIdx) {
+                            <td class="q-col">
+                              <input
+                                type="checkbox"
+                                [(ngModel)]="sched.trimestres[qIdx]"
+                                [disabled]="!canEditCurrentProposal()"
+                                [attr.aria-label]="'Trimestre ' + (qIdx + 1)"
+                              />
+                            </td>
+                          }
+                          @if (canEditCurrentProposal()) {
+                            <td>
+                              <button
+                                type="button"
+                                class="btn-table-action"
+                                (click)="removeScheduleRow($index)"
+                              >
+                                Quitar
+                              </button>
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="attachments-section">
+                  <h3>Espacio para Cargar Documentación Adicional que Sustente el Proyecto (Requerimiento 3)</h3>
+                  @if (canEditCurrentProposal()) {
+                    <div class="attachment-upload-bar">
+                      <select [(ngModel)]="newAttachmentCategory" class="att-select" aria-label="Categoría de anexo">
+                        <option value="Aval de Grupo / Sustento Técnico">Aval de Grupo / Sustento Técnico</option>
+                        <option value="Carta de Intención Entidad Aliada">Carta de Intención Entidad Aliada</option>
+                        <option value="Consentimiento Informado y Anexo Ético">Consentimiento Informado y Anexo Ético</option>
+                        <option value="Cotización de Equipos o Reactivos">Cotización de Equipos o Reactivos</option>
+                      </select>
+                      <input
+                        type="file"
+                        (change)="handleFileInput($event)"
+                        class="file-input-control"
+                        aria-label="Seleccionar archivo de sustento"
+                      />
+                      <input
+                        type="text"
+                        [(ngModel)]="newAttachmentCustomName"
+                      />
+                      <button type="button" class="btn-secondary-outline" (click)="addQuickSupportingDocument()">
+                        Adjuntar Documento
+                      </button>
+                    </div>
+                  }
+
+                  <div class="attachments-list">
+                    @for (att of draftProposal.attachments; track att.id) {
+                      <div class="attachment-row">
+                        <div>
+                          <strong>{{ att.fileName }}</strong>
+                          <span class="sub-cell"> · {{ att.category }}</span>
+                        </div>
+                        <span class="mono-num">{{ (att.fileSizeBytes / 1024).toFixed(1) }} KB · {{ att.uploadedAt.slice(0, 10) }}</span>
+                      </div>
+                    } @empty {
+                      <p class="small-note">No se han cargado anexos adicionales aún.</p>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- BARRA DE ENVÍO Y GENERACIÓN DE ENLACE PDF (REQUERIMIENTOS 3 Y 4) -->
+            <footer class="cim-submit-footer">
+              <div class="submit-footer-info">
+                <strong>Estado del Sometimiento {{ draftProposal.code }} (Versión {{ draftProposal.revisionCount }}):</strong>
+                <span>{{ formatStatusLabel(draftProposal.status) }}</span>
+              </div>
+              <div class="submit-footer-buttons">
+                @if (canEditCurrentProposal()) {
+                  @if (draftProposal.status === 'BORRADOR') {
+                    <button type="button" class="btn-secondary-outline" (click)="saveDraftOnly()">
+                      Guardar Avance en Borrador
+                    </button>
+                  }
+                  <button type="button" class="btn-primary-action" (click)="submitProposalToCommittee()">
+                    @if (draftProposal.status === 'SUBSANACION_SOLICITADA' || draftProposal.status === 'FAVORABLE_CON_OBSERVACIONES') {
+                      Nuevo Envío (Registrar Versión {{ draftProposal.revisionCount + 1 }})
+                    } @else {
+                      Enviar Sometimiento Inicial al Secretario CTC
+                    }
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="btn-teal-solid"
+                  (click)="pdfService.downloadProposalCimPdf(draftProposal)"
+                >
+                  Descargar Archivo PDF del Proyecto (CIM-FT-002-BUC)
+                </button>
+              </div>
+            </footer>
+
+            @if (draftProposal.versionHistory && draftProposal.versionHistory.length > 0) {
+              <div class="cim-section-body" style="margin-top: 24px; border-top: 2px solid #cbd5e1; padding-top: 20px;">
+                <h3>Apéndices de Versiones Enviadas de la Propuesta (Historial Completo por Versión)</h3>
+                <p class="panel-subtitle">
+                  Cada vez que se realiza el sometimiento inicial o un Nuevo Envío tras observaciones de Secretaría Técnica, el texto completo de la propuesta queda anexado como apéndice inmutable distinguido por su número de versión.
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 18px; margin-top: 14px;">
+                  @for (ver of draftProposal.versionHistory; track ver.versionNumber) {
+                    <div class="sheet-panel" style="border: 1px solid #94a3b8; background: #f8fafc;">
+                      <div class="panel-header-bar" style="border-bottom: 1px solid #cbd5e1; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div>
+                          <span class="status-pill" data-status="VISTO_BUENO_CTC" style="font-size: 0.9rem; margin-right: 10px;">
+                            Versión {{ ver.versionNumber }}
+                          </span>
+                          <strong style="font-size: 1.05rem;">Apéndice · Versión {{ ver.versionNumber }} — {{ ver.title }}</strong>
+                        </div>
+                        <span class="mono-num">Enviado: {{ ver.submittedAt }}</span>
+                      </div>
+
+                      <div class="form-grid-2">
+                        <div class="attachment-row">
+                          <div>
+                            <strong>1.1 Título del Proyecto (Versión {{ ver.versionNumber }})</strong>
+                            <div class="sub-cell">{{ ver.title }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>1.1 Investigador Principal y Programa</strong>
+                            <div class="sub-cell">{{ ver.principalInvestigatorName }} ({{ ver.principalInvestigatorEmail }}) · {{ ver.academicProgram }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>1.1 Grupo de Respaldo, Líder y Línea</strong>
+                            <div class="sub-cell">{{ ver.backingGroup }} · {{ ver.groupLeader }} · {{ ver.researchLine }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>1.1 Convocatoria, Entidad Aliada y Lugar</strong>
+                            <div class="sub-cell">{{ ver.callName }} ({{ ver.callType }}) · Aliado: {{ ver.alliedEntityName || 'N/A' }} · {{ ver.developmentLocation }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row span-2">
+                          <div>
+                            <strong>2.1 Planteamiento del Problema y Justificación (Versión {{ ver.versionNumber }})</strong>
+                            <div class="sub-cell" style="white-space: pre-wrap;">{{ ver.problemAndJustification }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>2.1 Objetivo General (Versión {{ ver.versionNumber }})</strong>
+                            <div class="sub-cell" style="white-space: pre-wrap;">{{ ver.generalObjective }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>2.2 Objetivos Específicos (Versión {{ ver.versionNumber }})</strong>
+                            <div class="sub-cell" style="white-space: pre-wrap;">{{ ver.specificObjectives }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>2.3.1 Diseño Metodológico y 2.3.2 Ámbito</strong>
+                            <div class="sub-cell" style="white-space: pre-wrap;">{{ ver.methodologyDesign }} | Ámbito: {{ ver.studySetting }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>2.3.3 Participantes y Muestreo / 2.3.4 Elegibilidad</strong>
+                            <div class="sub-cell" style="white-space: pre-wrap;">{{ ver.participantsAndSampling }} | Elegibilidad: {{ ver.eligibilityCriteria }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>2.3.5 Reclutamiento / 2.3.6 Recolección / 2.3.7 Procedimientos</strong>
+                            <div class="sub-cell" style="white-space: pre-wrap;">{{ ver.recruitmentPlan }} | {{ ver.dataCollectionTechniques }} | {{ ver.proceduresDescription }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>2.3.8 Análisis de Datos y 2.3.9 Consideraciones Éticas</strong>
+                            <div class="sub-cell" style="white-space: pre-wrap;">{{ ver.dataAnalysisPlan }} | Ética: {{ ver.ethicalConsiderations }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>2.4 Resultados Esperados y 3. Alianzas</strong>
+                            <div class="sub-cell" style="white-space: pre-wrap;">{{ ver.expectedResults }} | Alianzas: {{ ver.possibleAlliances }}</div>
+                          </div>
+                        </div>
+                        <div class="attachment-row">
+                          <div>
+                            <strong>5. Presupuesto Total Consolidado (Versión {{ ver.versionNumber }})</strong>
+                            <div class="sub-cell mono-num"><strong>$ {{ ver.budgetTotal.toLocaleString('es-CO') }} COP</strong></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </section>
+        }
+
+        <!-- ================================================================= -->
+        <!-- VISTA 3: REVISIÓN SECRETARÍA TÉCNICA, PLENO CTC Y TOKENS ÚNICOS   -->
+        <!-- ================================================================= -->
+        @if (activeTab() === 'SECRETARIA_Y_PLENO') {
+          @if (selectedProposal(); as prop) {
+            <div [class.split-evaluation-grid]="user.role !== 'INVESTIGADOR'">
+              <!-- COLUMNA IZQUIERDA: SECRETARÍA TÉCNICA + OBSERVACIONES PUNTO A PUNTO -->
+              <section class="sheet-panel">
+                <h2>Revisión de Secretaría Técnica y Pleno del Comité ({{ prop.code }})</h2>
+                <p class="panel-subtitle">
+                  Trazabilidad de observaciones punto a punto sobre los numerales de CIM-FT-002-BUC, solicitud de subsanaciones, Visto Bueno y emisión del concepto del pleno.
+                </p>
+
+                @if (canReviewOrGrade()) {
+                  <div class="secretary-action-box">
+                    <h3>1. Constructor de Observaciones Punto a Punto (Exclusivo Secretaría CTC)</h3>
+                    <div class="obs-builder-row">
+                      <select [(ngModel)]="newObsCode" aria-label="Numeral de la plantilla">
+                        <option value="1.1">1.1 Información general</option>
+                        <option value="1.2">1.2 Equipo de trabajo</option>
+                        <option value="2.1">2.1 Problema y Objetivo General</option>
+                        <option value="2.2">2.2 Objetivos Específicos</option>
+                        <option value="2.3.1">2.3.1 Diseño metodológico</option>
+                        <option value="2.3.3">2.3.3 Participantes y muestreo</option>
+                        <option value="2.3.4">2.3.4 Criterios de elegibilidad</option>
+                        <option value="2.3.8">2.3.8 Análisis de Datos</option>
+                        <option value="2.3.9">2.3.9 Consideraciones éticas</option>
+                        <option value="4">4. Análisis de Riesgos</option>
+                        <option value="5">5. Presupuesto</option>
+                        <option value="6">6. Cronograma de actividades</option>
+                      </select>
+                      <input
+                        type="text"
+                        [(ngModel)]="newObsLabel"
+                      />
+                      <input
+                        type="text"
+                        [(ngModel)]="newObsText"
+                      />
+                      <button type="button" class="btn-secondary-outline" (click)="addPointObservationRow()">
+                        + Añadir Punto
+                      </button>
+                    </div>
+
+                    <div class="obs-draft-list" [class.has-focus]="focusedObservationIndex() !== null">
+                      @for (obs of draftPointObservations; track $index) {
+                        <div
+                          class="obs-item-row"
+                          [class.dimmed]="focusedObservationIndex() !== null && focusedObservationIndex() !== $index"
+                          (mouseenter)="focusedObservationIndex.set($index)"
+                          (mouseleave)="focusedObservationIndex.set(null)"
+                        >
+                          <div>
+                            <span class="mono-num obs-code-tag">Numeral {{ obs.itemCode }} · {{ obs.itemLabel }}</span>
+                            <p>{{ obs.observation }}</p>
+                          </div>
+                          <button type="button" class="btn-table-action" (click)="removePointObservationRow($index)">
+                            Eliminar
+                          </button>
+                        </div>
+                      }
+                    </div>
+
+                    <div class="review-stage-forms">
+                      <div class="stage-form-box">
+                        <h3>2. Decisión de Revisión de Secretaría Técnica (Requerimiento 4)</h3>
+                        <div class="field-group">
+                          <label>Acción de Secretaría sobre el envío:</label>
+                          <select [(ngModel)]="secretaryDecision">
+                            <option value="SOLICITAR_MODIFICACIONES">
+                              Solicitar modificaciones, mejoras o revisión al Investigador Principal (Envía correo)
+                            </option>
+                            <option value="VISTO_BUENO_CTC">
+                              Dar Visto Bueno para presentar al próximo Comité Técnico Científico (Envía correo)
+                            </option>
+                          </select>
+                        </div>
+                        <div class="field-group">
+                          <label>Fecha programada de sesión del Comité Técnico Científico:</label>
+                          <input type="date" [(ngModel)]="secretarySessionDate" />
+                        </div>
+                        <div class="field-group">
+                          <label>Mensaje y síntesis de revisión para el Investigador Principal:</label>
+                          <textarea rows="3" [(ngModel)]="secretarySummary"></textarea>
+                        </div>
+                        <button type="button" class="btn-primary-action full-width" (click)="submitSecretaryDecision()">
+                          Registrar Decisión de Secretaría y Enviar Correo al Investigador
+                        </button>
+                      </div>
+
+                      <div class="stage-form-box">
+                        <h3>3. Decisión en Pleno del Comité Técnico Científico (Requerimiento 5)</h3>
+                        <div class="field-group">
+                          <label>Concepto emitido por el pleno del Comité Técnico Científico:</label>
+                          <select [(ngModel)]="plenaryConcept">
+                            <option value="FAVORABLE">Favorable (Genera tokens de firma de miembros)</option>
+                            <option value="FAVORABLE_CON_OBSERVACIONES">
+                              Favorable con observaciones / modificaciones (Reporte sin firmas hasta subsanar)
+                            </option>
+                            <option value="RECHAZADO">Rechazado</option>
+                          </select>
+                        </div>
+                        <div class="field-group">
+                          <label>Acta y observaciones generales del pleno CTC:</label>
+                          <textarea rows="3" [(ngModel)]="plenarySummary"></textarea>
+                        </div>
+                        <button type="button" class="btn-teal-solid full-width" (click)="submitPlenaryConcept()">
+                          Cargar Concepto del Pleno CTC y Emitir Tokens de Una Sola Utilización
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="readonly-role-banner">
+                    <strong>Restricción de Calificación por Rol (Requerimiento 6):</strong>
+                    Solo el Secretario del Comité Técnico Científico puede calificar, modificar o registrar observaciones sobre los proyectos. Su perfil actual ({{ formatRoleLabel(user.role) }}) cuenta con acceso de lectura completa y descarga de los informes oficiales.
+                  </div>
+                }
+
+                @if (user.role === 'INVESTIGADOR' && prop.ctcConcept === 'FAVORABLE_CON_OBSERVACIONES' && !prop.ctcModificationsCleared) {
+                  <div class="amber-regulatory-box" style="margin-top: 14px;">
+                    <h3>Concepto Favorable con Modificaciones — Reporte Preliminar sin Firmas</h3>
+                    <p>
+                      Conforme al Requerimiento 5, esta propuesta tiene concepto <strong>Favorable con observaciones / modificaciones</strong> pendiente de subsanación. Al descargar el PDF del Concepto CTC, el reporte se genera <strong>sin la aprobación firmada de los miembros del comité</strong> hasta tanto realice los ajustes o aclaraciones solicitadas.
+                    </p>
+                  </div>
+                }
+
+                <div class="history-reviews-box">
+                  <h3>Historial de Revisiones y Observaciones Punto a Punto Registradas</h3>
+                  @for (rev of prop.reviews; track rev.id) {
+                    <div class="review-history-item">
+                      <div class="rev-header">
+                        <strong>{{ rev.stage }} · {{ rev.decision }} (V{{ rev.revisionNumber }})</strong>
+                        <span class="mono-num">{{ rev.reviewerName }} · {{ rev.createdAt.slice(0, 10) }}</span>
+                      </div>
+                      <p class="rev-summary">{{ rev.generalSummary }}</p>
+                      @for (pt of rev.pointObservations; track $index) {
+                        <div class="rev-point-line">
+                          <span class="mono-num">[Numeral {{ pt.itemCode }} — {{ pt.itemLabel }}]:</span>
+                          <span>{{ pt.observation }}</span>
+                          <span class="mono-num">{{ pt.resolved ? '(Subsanado)' : '(Pendiente)' }}</span>
+                        </div>
+                      }
+                    </div>
+                  } @empty {
+                    <p class="small-note">Aún no se han registrado revisiones para este proyecto.</p>
+                  }
+                </div>
+
+                @if (user.role === 'INVESTIGADOR') {
+                  <div class="concept-download-box" style="margin-top: 16px;">
+                    <button
+                      type="button"
+                      class="btn-navy-solid full-width"
+                      (click)="pdfService.downloadCtcConceptPdf(prop)"
+                    >
+                      Descargar Reporte Oficial de Concepto y Observaciones CTC (PDF)
+                    </button>
+                  </div>
+                }
+              </section>
+
+              <!-- COLUMNA DERECHA: FIRMA CON TOKENS DE UNA SOLA UTILIZACIÓN (SOLO MIEMBROS DEL CTC Y SECRETARÍA) -->
+              @if (user.role !== 'INVESTIGADOR') {
+                <section class="sheet-panel token-vault-panel">
+                  <h2>Aprobación de Miembros del CTC mediante Tokens de Una Sola Utilización</h2>
+                  <p class="panel-subtitle">
+                    Cada miembro del Comité Técnico Científico aprueba y firma el concepto emitido en el pleno utilizando un token criptográfico de un solo uso que queda invalidado tras su consumo.
+                  </p>
+
+                  @if (prop.ctcConcept === 'FAVORABLE_CON_OBSERVACIONES' && !prop.ctcModificationsCleared) {
+                    <div class="amber-regulatory-box">
+                      <h3>Concepto Favorable con Modificaciones — Reporte Preliminar sin Firmas</h3>
+                      <p>
+                        Conforme al Requerimiento 5, esta propuesta tiene concepto <strong>Favorable con observaciones / modificaciones</strong> pendiente de subsanación. Al descargar el PDF del Concepto CTC, el reporte se genera <strong>sin la aprobación firmada de los miembros del comité</strong> hasta tanto el Investigador Principal realice los ajustes o aclaraciones solicitadas.
+                      </p>
+                    </div>
+                  }
+
+                  <div class="token-sign-form-box">
+                    <h3>Consumir Token de Una Sola Utilización (Firma Personal de {{ user.fullName }})</h3>
+                    <div class="token-input-row">
+                      <input
+                        type="text"
+                        class="mono-num"
+                        [(ngModel)]="memberSingleUseTokenInput"
+                      />
+                      <button type="button" class="btn-teal-solid" (click)="consumeMemberSingleUseToken()">
+                        Firmar Concepto con mi Token Único
+                      </button>
+                    </div>
+                    <p class="small-note">
+                      Cada miembro del Comité Técnico Científico (incluido el Secretario) únicamente puede firmar con el token personal asignado a su propio usuario.
+                    </p>
+                  </div>
+
+                  <div class="token-ledger-list">
+                    @for (tok of prop.signatureTokens; track tok.id) {
+                      <div class="token-ledger-item" [class.used]="tok.isUsed">
+                        <div class="token-member-info">
+                          <strong>{{ tok.memberName }}</strong>
+                          <div class="sub-cell">{{ tok.memberPosition }} · {{ tok.memberEmail }}</div>
+                          @if (isCurrentUsersToken(tok)) {
+                            <div class="mono-num token-code-line">
+                              Mi Token Único: <strong>{{ tok.singleUseToken }}</strong>
+                            </div>
+                          } @else {
+                            <div class="mono-num token-code-line">
+                              Token personal reservado para {{ tok.memberEmail }}
+                            </div>
+                          }
+                          @if (tok.isUsed && tok.signatureHash) {
+                            <div class="mono-num hash-line">
+                              SHA-256: {{ tok.signatureHash.slice(0, 36) }}... ({{ tok.usedAt ? tok.usedAt.slice(0, 16).replace('T', ' ') : '' }})
+                            </div>
+                          }
+                        </div>
+                        <div class="token-status-col">
+                          @if (tok.isUsed) {
+                            <span class="token-badge signed mono-num">FIRMADO · 1 USO CONSUMIDO</span>
+                          } @else if (isCurrentUsersToken(tok)) {
+                            <button
+                              type="button"
+                              class="btn-secondary-outline mono-num"
+                              (click)="memberSingleUseTokenInput = tok.singleUseToken"
+                            >
+                              Seleccionar mi Token
+                            </button>
+                          } @else {
+                            <span class="sub-cell mono-num">Pendiente firma del titular</span>
+                          }
+                        </div>
+                      </div>
+                    } @empty {
+                      <p class="small-note">
+                        Aún no se han generado tokens de firma para este proyecto. El Secretario del CTC los genera al cargar el concepto del pleno.
+                      </p>
+                    }
+                  </div>
+
+                  <div class="concept-download-box">
+                    <button
+                      type="button"
+                      class="btn-navy-solid full-width"
+                      (click)="pdfService.downloadCtcConceptPdf(prop)"
+                    >
+                      Descargar Reporte Oficial de Concepto y Observaciones CTC (PDF)
+                    </button>
+                  </div>
+                </section>
+              }
+            </div>
+          }
+        }
+
+        <!-- ================================================================= -->
+        <!-- VISTA 4: GENERADOR DE LISTADO CON CAMPOS SELECCIONABLES (REQ. 6)  -->
+        <!-- ================================================================= -->
+        @if (activeTab() === 'REPORTES_CAMPOS') {
+          <section class="sheet-panel">
+            <div class="panel-header-bar">
+              <div>
+                <h2>Generador Dinámico de Listado de Proyectos e Informes (Requerimiento 6)</h2>
+                <p class="panel-subtitle">
+                  Seleccione exactamente los campos de la plantilla CIM-FT-002-BUC y del estado de evaluación que desea incluir en la tabla y exporte el informe en PDF o CSV.
+                </p>
+              </div>
+              <div class="row-actions">
+                <button type="button" class="btn-secondary-outline" (click)="exportCustomReportCsv()">
+                  Exportar Listado Seleccionado (CSV)
+                </button>
+                <button type="button" class="btn-teal-solid" (click)="exportCustomReportPdf()">
+                  Descargar Informe con Campos Seleccionados (PDF)
+                </button>
+              </div>
+            </div>
+
+            <div class="field-selector-grid">
+              @for (field of reportFields; track field.key) {
+                <label class="field-checkbox-chip">
+                  <input type="checkbox" [(ngModel)]="field.selected" />
+                  <span>{{ field.label }}</span>
+                </label>
+              }
+            </div>
+
+            <div class="table-scroll" style="margin-top: 20px;">
+              <table class="ledger-table">
+                <thead>
+                  <tr>
+                    @for (col of selectedReportColumns(); track col.key) {
+                      <th>{{ col.label }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of filteredProposals(); track p.id) {
+                    <tr>
+                      @for (col of selectedReportColumns(); track col.key) {
+                        <td [class.mono-num]="col.key === 'code' || col.key === 'budgetTotal' || col.key === 'revisionCount'">
+                          {{ getReportCellValue(p, col.key) }}
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          @if (selectedProposal(); as activeProp) {
+            <div class="split-evaluation-grid">
+              <section class="sheet-panel">
+                <h2>Resumen Estructurado del Expediente Seleccionado ({{ activeProp.code }})</h2>
+                <p class="panel-subtitle">
+                  Síntesis de los numerales de la plantilla CIM-FT-002-BUC (Versión 00) y presupuesto consolidado.
+                </p>
+                <div class="form-grid-2" style="margin-top: 14px;">
+                  <div class="attachment-row">
+                    <div>
+                      <strong>1.1 Investigador Principal</strong>
+                      <div class="sub-cell">{{ activeProp.principalInvestigatorName }}</div>
+                    </div>
+                    <span class="mono-num">{{ activeProp.campus }}</span>
+                  </div>
+                  <div class="attachment-row">
+                    <div>
+                      <strong>1.1 Grupo y Línea</strong>
+                      <div class="sub-cell">{{ activeProp.researchLine }}</div>
+                    </div>
+                    <span class="mono-num">V{{ activeProp.revisionCount }}</span>
+                  </div>
+                  <div class="attachment-row">
+                    <div>
+                      <strong>5. Presupuesto Total (11 Rubros)</strong>
+                      <div class="sub-cell">Contrapartida UDES + Aliado + Convocatoria</div>
+                    </div>
+                    <span class="mono-num"><strong>$ {{ activeProp.budgetTotal.toLocaleString('es-CO') }}</strong></span>
+                  </div>
+                  <div class="attachment-row">
+                    <div>
+                      <strong>Anexos y Cronograma (12T)</strong>
+                      <div class="sub-cell">{{ activeProp.attachments.length }} documento(s) de sustento</div>
+                    </div>
+                    <button type="button" class="btn-table-action teal" (click)="activeTab.set('FORMULARIO_CIM')">
+                      Abrir 6 Secciones CIM-002
+                    </button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="sheet-panel">
+                <h2>Observaciones Punto a Punto y Sellos de Token Único CTC</h2>
+                <p class="panel-subtitle">
+                  Estado de aprobación colegiada mediante tokens de una sola utilización de los miembros del Comité Técnico Científico.
+                </p>
+                <div class="token-ledger-list" style="margin-top: 12px;">
+                  @for (tok of activeProp.signatureTokens; track tok.id) {
+                    <div class="token-ledger-item" [class.used]="tok.isUsed">
+                      <div>
+                        <strong>{{ tok.memberName }}</strong>
+                        <div class="mono-num sub-cell">
+                          @if (isCurrentUsersToken(tok)) {
+                            {{ tok.singleUseToken }}
+                          } @else {
+                            Token personal enviado a {{ tok.memberEmail }}
+                          }
+                        </div>
+                      </div>
+                      @if (tok.isUsed) {
+                        <span class="token-badge signed mono-num">FIRMADO · 1 USO</span>
+                      } @else if (isCurrentUsersToken(tok)) {
+                        <button
+                          type="button"
+                          class="btn-secondary-outline mono-num"
+                          (click)="memberSingleUseTokenInput = tok.singleUseToken; activeTab.set('SECRETARIA_Y_PLENO')"
+                        >
+                          Firmar con mi Token
+                        </button>
+                      } @else {
+                        <span class="sub-cell mono-num">Pendiente firma del miembro</span>
+                      }
+                    </div>
+                  } @empty {
+                    <div class="attachment-row">
+                      <span>Pendiente de emisión de tokens en sesión plenaria del CTC.</span>
+                      <button type="button" class="btn-secondary-outline" (click)="activeTab.set('SECRETARIA_Y_PLENO')">
+                        Ir a Revisión / Pleno
+                      </button>
+                    </div>
+                  }
+                </div>
+              </section>
+            </div>
+          }
+        }
+
+        <!-- ================================================================= -->
+        <!-- VISTA 5: CREACIÓN DE USUARIOS DESDE SECRETARÍA CTC (REQ. 2)       -->
+        <!-- ================================================================= -->
+        @if (activeTab() === 'USUARIOS_OAUTH') {
+          <div class="split-evaluation-grid">
+            <section class="sheet-panel">
+              <h2>Creación de Usuarios con Enlace OAuth / JWT por Correo (Requerimiento 2)</h2>
+              <p class="panel-subtitle">
+                El Secretario del Comité Técnico Científico registra el usuario y su rol. La plataforma genera y envía automáticamente un correo electrónico con un enlace único para que el usuario cree su contraseña personal.
+              </p>
+
+              <form (ngSubmit)="handleCreateUserBySecretary()" class="stack-form" style="margin-top: 18px;">
+                <div class="field-group">
+                  <label>Nombre completo del investigador o miembro:</label>
+                  <input
+                    type="text"
+                    name="newUserFullName"
+                    [(ngModel)]="newUserFullName"
+                    required
+                  />
+                </div>
+                <div class="field-group">
+                  <label>Correo electrónico institucional:</label>
+                  <input
+                    type="email"
+                    name="newUserEmail"
+                    [(ngModel)]="newUserEmail"
+                    required
+                  />
+                </div>
+                <div class="field-group">
+                  <label>Rol asignado en la plataforma:</label>
+                  <select name="newUserRole" [(ngModel)]="newUserRole">
+                    <option value="INVESTIGADOR">Investigador Principal</option>
+                    <option value="MIEMBRO_CTC">Miembro del Comité Técnico Científico</option>
+                    <option value="SECRETARIO_CTC">Secretario del Comité Técnico Científico</option>
+                    <option value="ADMIN">Administrador del Sistema</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label>Programa o Unidad Académica:</label>
+                  <input type="text" name="newUserUnit" [(ngModel)]="newUserUnit" />
+                </div>
+                <div class="field-group">
+                  <label>Grupo de Investigación:</label>
+                  <input type="text" name="newUserGroup" [(ngModel)]="newUserGroup" />
+                </div>
+
+                <button type="submit" class="btn-primary-action full-width">
+                  Crear Usuario y Enviar Correo con Enlace de Contraseña
+                </button>
+              </form>
+            </section>
+
+            <section class="sheet-panel">
+              <h2>Directorio de Usuarios y Estado de Activación JWT</h2>
+              <p class="panel-subtitle">
+                Haga clic en "Abrir Enlace de Creación de Contraseña" sobre cualquier usuario pendiente para probar el flujo completo de creación de contraseña e ingreso.
+              </p>
+
+              <div class="table-scroll" style="margin-top: 16px;">
+                <table class="ledger-table">
+                  <thead>
+                    <tr>
+                      <th>Nombre y Unidad</th>
+                      <th>Correo</th>
+                      <th>Rol</th>
+                      <th>Estado Contraseña</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (u of store.users(); track u.id) {
+                      <tr>
+                        <td>
+                          <strong>{{ u.fullName }}</strong>
+                          <div class="sub-cell">{{ u.academicUnit }}</div>
+                        </td>
+                        <td class="mono-num">{{ u.email }}</td>
+                        <td class="mono-num">{{ u.role }}</td>
+                        <td>
+                          @if (u.isActive) {
+                            <span class="status-pill" data-status="FAVORABLE">Activa · Verificada</span>
+                          } @else {
+                            <button
+                              type="button"
+                              class="btn-teal-solid"
+                              (click)="openPasswordSetupWithToken(u.passwordSetupToken!)"
+                            >
+                              Abrir Enlace ({{ u.passwordSetupToken }})
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        }
+
+        <!-- ================================================================= -->
+        <!-- VISTA 6: BANDEJA DE CORREO ELECTRÓNICO DEL SISTEMA (REQ. 2, 4, 5) -->
+        <!-- ================================================================= -->
+        @if (activeTab() === 'CORREOS_SISTEMA') {
+          <section class="sheet-panel">
+            <h2>Bandeja de Notificaciones por Correo Electrónico (Auditoría SMTP / Enlaces Activos)</h2>
+            <p class="panel-subtitle">
+              Registro en vivo de todos los correos generados por la plataforma: enlaces de creación de contraseña, avisos de sometimiento al Secretario CTC, solicitudes de modificaciones al Investigador Principal, notificaciones de Visto Bueno y entrega de tokens de un solo uso.
+            </p>
+
+            <div class="email-list">
+              @for (mail of store.emails(); track mail.id) {
+                <div class="email-item">
+                  <div class="email-header-row">
+                    <div>
+                      <h3>{{ mail.subject }}</h3>
+                      <div class="sub-cell">
+                        Para: <strong>{{ mail.recipientName }}</strong> (<span class="mono-num">{{ mail.recipientEmail }}</span>)
+                      </div>
+                    </div>
+                    <div class="mono-num email-meta">
+                      <span class="email-cat-badge">{{ mail.category }}</span>
+                      <span>{{ mail.createdAt.slice(0, 16).replace('T', ' ') }}</span>
+                    </div>
+                  </div>
+                  <p class="email-body">{{ mail.bodyText }}</p>
+                  <div class="email-actions-row">
+                    @if (mail.activationToken) {
+                      <button
+                        type="button"
+                        class="btn-teal-solid"
+                        (click)="openPasswordSetupWithToken(mail.activationToken!); $event.stopPropagation()"
+                      >
+                        Abrir Enlace del Correo para Crear Contraseña ({{ mail.activationToken }})
+                      </button>
+                    }
+                    @if (mail.singleUseSignatureToken && user.role !== 'INVESTIGADOR') {
+                      <button
+                        type="button"
+                        class="btn-navy-solid"
+                        (click)="memberSingleUseTokenInput = mail.singleUseSignatureToken!; activeTab.set('SECRETARIA_Y_PLENO'); $event.stopPropagation()"
+                      >
+                        Ir a Firmar en Pleno con Token ({{ mail.singleUseSignatureToken }})
+                      </button>
+                    }
+                    @if (mail.relatedProposalId) {
+                      <button
+                        type="button"
+                        class="btn-secondary-outline"
+                        (click)="selectedProposalId.set(mail.relatedProposalId!); activeTab.set('FORMULARIO_CIM'); $event.stopPropagation()"
+                      >
+                        Abrir Expediente {{ mail.relatedProposalCode }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      </main>
+    </div>
+  }
+}

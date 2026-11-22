@@ -1,0 +1,55 @@
+================================================================================
+DIRECTORIO DE USUARIOS Y CREDENCIALES — PLATAFORMA CTC INSTITUTO MASIRA - UDES
+================================================================================
+
+--------------------------------------------------------------------------------
+1. MIEMBROS DEL COMITÉ TÉCNICO CIENTÍFICO (CTC)
+--------------------------------------------------------------------------------
+
+Nombre de usuario: Dra. Mabel Margoth Reyes (Secretaria del Comité Técnico Científico - SECRETARIO_CTC)
+Correo electrónico: secretario.ctc@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dr. Patricio López Jaramillo (Miembro del Comité Técnico Científico - MIEMBRO_CTC)
+Correo electrónico: patricio.lopez@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dr. José Patricio López López (Miembro del Comité Técnico Científico - MIEMBRO_CTC)
+Correo electrónico: jose.lopez@udes.edu.co
+Contraseña: Masira2026*
+
+--------------------------------------------------------------------------------
+2. INVESTIGADORES PRINCIPALES (8 PROYECTOS EN DISTINTAS ETAPAS)
+--------------------------------------------------------------------------------
+
+Nombre de usuario: Dr. Carlos Andrés Gómez Sarmiento
+Correo electrónico: carlos.gomez@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dra. Natalia Sofía Serrano Rojas
+Correo electrónico: natalia.serrano@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dra. Laura Juliana Mantilla Pinzón
+Correo electrónico: laura.mantilla@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dr. Andrés Felipe Villamizar Ortiz
+Correo electrónico: andres.villamizar@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dra. Claudia Patricia Jaimes Calderón
+Correo electrónico: claudia.jaimes@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dr. Mauricio Alejandro Pineda Vargas
+Correo electrónico: mauricio.pineda@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dra. Diana Carolina Duarte Meneses
+Correo electrónico: diana.duarte@udes.edu.co
+Contraseña: Masira2026*
+
+Nombre de usuario: Dr. Jorge Enrique Castellanos Rueda
+Correo electrónico: jorge.castellanos@udes.edu.co
+Contraseña: Masira2026*
