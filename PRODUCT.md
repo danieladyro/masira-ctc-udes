@@ -9,9 +9,9 @@ web
 ## Stack
 
 - **Frontend:** Angular 20 (SPA / SSR-ready web application, containerized in Docker)
-- **Backend:** Rust REST API (Actix-web / Axum, JWT + OAuth2-style password setup & token authentication, PDF generation, containerized in Docker)
-- **Database:** PostgreSQL
-- **Infrastructure:** Docker & Docker Compose (separate containers for frontend, backend, and database)
+- **Backend:** Rust REST API (Axum, SQLx, JWT + OAuth2-style password setup & token authentication, `lettre` SMTP dispatch, `printpdf` PDF generation, containerized in Docker)
+- **Database:** PostgreSQL 16 (relacional + `JSONB` para matrices normativas, apéndices de versiones enviadas `version_history` y semilla inicial con 3 miembros del CTC, 8 investigadores principales y 20 propuestas `CIM-2026-001` a `CIM-2026-020`)
+- **Infrastructure:** Docker & Docker Compose (contenedores independientes para `frontend`, `backend`, `postgres` y servidor SMTP `mailpit`)
 
 ## Users
 
@@ -65,3 +65,11 @@ Plataforma tecnológica en línea para la gestión integral, evaluación, revisi
 2. **Trazabilidad transparente del ciclo de evaluación:** Cada cambio de estado, observación punto a punto, subsanación y firma con token de un solo uso queda registrado con marca de tiempo y actor responsable.
 3. **Separación estricta de atribuciones por rol:** Garantizar que cada actor (Investigador, Secretario CTC, Miembro CTC, Administrador) opere en una estación de trabajo enfocada en sus responsabilidades exactas y límites de visibilidad.
 4. **Autonomía operativa en contenedores:** Todo el flujo —desde la invitación por correo y activación de contraseña hasta la firma colegiada con token único y descarga de PDFs— debe funcionar de forma autónoma y verificable al levantar los contenedores Docker.
+
+## Evolución del Producto (Cambios entre la Versión Inicial y la Versión Actual)
+
+- **Portafolio Semilla de 20 Propuestas (`CIM-2026-001` a `CIM-2026-020`):** Conservando los 3 miembros del Comité Técnico Científico y los 8 investigadores principales en `database/seed.sql`, se escaló la base de datos de 8 a 20 propuestas de investigación completas distribuidas en las 10 etapas del proceso de evaluación (`BORRADOR`, `SOMETIDO`, `EN_REVISION_SECRETARIA`, `SUBSANACION_SOLICITADA`, `REENVIADO`, `VISTO_BUENO_CTC`, `EN_PLENO_CTC`, `FAVORABLE_CON_OBSERVACIONES`, `FAVORABLE` y `RECHAZADO`).
+- **Selector Desplegable de Proyectos en el Registro General:** Para evitar listas extensas en pantalla al manejar decenas de proyectos, el componente *"Registro General de Propuestas Sometidas al Comité Técnico Científico"* incorpora una lista desplegable (`<select>`) filtrable por búsqueda y estado que permite elegir el proyecto activo y visualizar únicamente su fila de resumen y acciones en la tabla inferior.
+- **Inmutabilidad Post-Envío y Apéndices por Versión (`version_history`):** Tras enviar el sometimiento inicial o un reenvío subsanado (`Nuevo Envío`), los campos del formulario `CIM-FT-002-BUC` se bloquean para el investigador y solo se rehabilitan con datos prediligenciados cuando media una solicitud de modificaciones. Cada envío genera una instantánea completa (`Versión 1`, `Versión 2`, etc.) anexada como apéndice en la vista web y en el PDF oficial.
+- **Privacidad de Tokens de Firma de Un Solo Uso:** Cada miembro del CTC visualiza y puede consumir únicamente su propio token criptográfico asociado a su correo institucional, impidiendo firmas cruzadas entre miembros.
+- **Flujo Completo de Correo SMTP y Enlace de Activación:** Integración con servidor SMTP (`mailpit`) y lectura automática del parámetro `?token=` en la URL para activar contraseñas de nuevos usuarios directamente desde el enlace enviado por correo.
